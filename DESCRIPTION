@@ -10,7 +10,7 @@ Description: A unified toolkit for cointegration testing including
     accommodate smooth structural breaks via flexible Fourier terms, and
     panel CADF cointegration tests with structural breaks using the Common
     Correlated Effects (CCE) estimator following Banerjee, Arcabic and Lee
-    (2017) <doi:10.1016/j.econmod.2017.03.004>, Tsong, Lee, Tsai and Hu
+    (2017) <doi:10.1016/j.econmod.2016.11.004>, Tsong, Lee, Tsai and Hu
     (2016) <doi:10.1007/s00181-015-1028-6>, and Banerjee and
     Carrion-i-Silvestre (2025) <doi:10.1080/07350015.2024.2327844>.
 License: GPL-3
