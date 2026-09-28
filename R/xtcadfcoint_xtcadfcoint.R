@@ -37,43 +37,69 @@
 #'
 #' @return An object of class \code{"xtcadfcoint"} with components:
 #'   \describe{
-#'     \item{panel_cips}{Panel CIPS statistic (lambda_hat).}
-#'     \item{panel_cips_alt}{Alternative panel CIPS statistic (lambda_tilde,
-#'       only when \code{breaks > 0}).}
-#'     \item{t_individual}{Numeric vector of individual CADF/ADF t-statistics.}
-#'     \item{p_selected}{Integer vector of selected lag orders per unit.}
-#'     \item{beta_ccep}{Pooled CCE coefficient vector (length k).}
-#'     \item{SSR}{Matrix of sum-of-squared residuals across estimation stages.}
-#'     \item{Tb_hat}{Estimated break dates for lambda_hat (if \code{breaks > 0}).}
-#'     \item{Tb_tilde}{Estimated break dates for lambda_tilde (if \code{breaks > 0}).}
-#'     \item{N}{Number of cross-sectional units.}
-#'     \item{TT}{Number of time periods.}
-#'     \item{k}{Number of regressors.}
-#'     \item{model}{Model specification used.}
-#'     \item{breaks}{Number of breaks.}
-#'     \item{cv}{Bootstrap critical values (if \code{simulate > 0}).}
+#'     \item{panel_cips}{Panel CIPS statistic; with breaks, computed at the
+#'       break dates \code{Tb_hat}.}
+#'     \item{panel_cips_alt}{Panel statistic at the alternative break dates
+#'       \code{Tb_tilde} (\code{NULL} without breaks).}
+#'     \item{panel_cips_trim}{Panel statistic on the Kim and Perron (2009)
+#'       trimmed data (model 5 only).}
+#'     \item{t_individual, t_trim}{Individual CADF (or ADF) t-statistics.}
+#'     \item{p_selected}{Selected lag orders per unit.}
+#'     \item{beta_ccep, beta_ccep_alt}{Pooled CCE estimates of the
+#'       cointegrating vector (regime-specific when \code{brk_slope = TRUE}).}
+#'     \item{SSR}{Sums of squared residuals: levels and first differences of
+#'       the defactored and of the detrended residuals.}
+#'     \item{Tb_hat, Tb_tilde, Tb_trim}{Estimated break dates (positions in
+#'       the sample; a break at \eqn{T_b} shifts the level from
+#'       \eqn{T_b + 1}).}
+#'     \item{cv}{Simulated critical values (if \code{simulate > 0}): rows
+#'       \code{panel} and \code{individual}, columns 1\%, 2.5\%, 5\%,
+#'       10\%.}
+#'     \item{N, TT, k, model, breaks, ...}{Settings of the call.}
 #'   }
 #'
 #' @details
-#' The panel CIPS statistic aggregates individual CADF t-statistics:
-#' \deqn{\hat{\lambda} = N^{-1} \sum_{i=1}^N t_i^{CADF}}
+#' The pooled CCE estimator (equation 13 of the paper) is computed with the
+#' projection on the deterministic terms and the cross-section averages of
+#' \eqn{y} and \eqn{x} (interacted with the break dummies when
+#' \code{brk_loadings = TRUE}). With breaks, the break dates are chosen by
+#' a grid search: \code{Tb_hat} minimises the sum of squared defactored
+#' residuals (equation 14) and \code{Tb_tilde} the sum of squared residuals
+#' after removing only the deterministic terms (equations 15 and 16). Each
+#' unit's statistic is the t-ratio of the lagged residual in the
+#' cross-section augmented ADF regression (equation 17), with impulse
+#' dummies at \eqn{T_b + 1}; \code{nfactors} sets how many
+#' cross-section averages enter. For model 5 the statistic is also computed
+#' on data trimmed by three observations on each side of the break (Kim
+#' and Perron, 2009), with \code{maxlags} fixed lags.
 #'
-#' Cross-sectional dependence is handled by augmenting each unit's ADF
-#' regression with cross-sectional means of the dependent variable and
-#' regressors (CCE approach of Pesaran, 2006).
+#' The computations reproduce the Stata module \code{xtcadfcoint}, which
+#' states that it translates the authors' GAUSS code; results were checked
+#' against it. The information criteria and the residual variance use the
+#' full \eqn{T} as in that code, and the MAIC and MBIC penalties follow Ng
+#' and Perron (2001).
 #'
-#' Break dates are estimated by minimising the panel sum of squared residuals
-#' (lambda_hat) or by individual sequential minimisation (lambda_tilde).
-#'
-#' For models 0--2 (no breaks), the standard asymptotic critical values from
-#' Banerjee and Carrion-i-Silvestre (2025, Tables B.13--B.24) should be used,
-#' or bootstrapped via \code{simulate}.
+#' Critical values depend on \eqn{N}, \eqn{T}, \eqn{k}, the model and
+#' the break fractions (Tables B.1 to B.24 of the supplementary material
+#' of the paper cover one break). \code{simulate} draws them from
+#' independent random walks at the estimated break dates \code{Tb_hat},
+#' without lag augmentation. The Stata module instead fixes the break
+#' fractions at 0.5 (one break) or 0.3 and 0.7 (two breaks).
 #'
 #' @references
 #' Banerjee, A. and Carrion-i-Silvestre, J.L. (2025).
 #' Panel Data Cointegration Testing with Structural Instabilities.
-#' \emph{Journal of Business & Economic Statistics}, 43(2), 380--395.
+#' \emph{Journal of Business & Economic Statistics}, 43(1), 122--133.
 #' \doi{10.1080/07350015.2024.2327844}
+#'
+#' Kim, D. and Perron, P. (2009). Unit root tests allowing for a break in
+#' the trend function at an unknown time under both the null and
+#' alternative hypotheses. \emph{Journal of Econometrics}, 148(1), 1--13.
+#' \doi{10.1016/j.jeconom.2008.08.019}
+#'
+#' Ng, S. and Perron, P. (2001). Lag length selection and the construction
+#' of unit root tests with good size and power. \emph{Econometrica}, 69(6),
+#' 1519--1554. \doi{10.1111/1468-0262.00256}
 #'
 #' Pesaran, M.H. (2006). Estimation and Inference in Large Heterogeneous Panels
 #' with a Multifactor Error Structure. \emph{Econometrica}, 74(4), 967--1012.
@@ -109,562 +135,373 @@ xtcadfcoint <- function(formula, data, index,
                          simulate = 0L,
                          level = 95L) {
 
-  ## ── Input validation ────────────────────────────────────────────────────
-  if (!inherits(formula, "formula")) {
+  if (!inherits(formula, "formula"))
     stop("'formula' must be a formula object.", call. = FALSE)
-  }
-  if (!is.data.frame(data)) {
+  if (!is.data.frame(data))
     stop("'data' must be a data frame.", call. = FALSE)
-  }
-  if (!is.character(index) || length(index) != 2) {
+  if (!is.character(index) || length(index) != 2)
     stop("'index' must be a character vector of length 2.", call. = FALSE)
-  }
-  if (!all(index %in% names(data))) {
+  if (!all(index %in% names(data)))
     stop("Variables in 'index' not found in 'data'.", call. = FALSE)
-  }
   model    <- as.integer(model)
   breaks   <- as.integer(breaks)
   maxlags  <- as.integer(maxlags)
   nfactors <- as.integer(nfactors)
   simulate <- as.integer(simulate)
-
-  if (model < 0L || model > 5L) {
+  if (model < 0L || model > 5L)
     stop("'model' must be an integer between 0 and 5.", call. = FALSE)
-  }
-  if (breaks < 0L || breaks > 2L) {
+  if (breaks < 0L || breaks > 2L)
     stop("'breaks' must be 0, 1, or 2.", call. = FALSE)
-  }
-  if (breaks == 0L && model >= 3L) {
+  if (breaks == 0L && model >= 3L)
     stop("Models 3-5 require breaks >= 1.", call. = FALSE)
-  }
-  if (breaks > 0L && model < 3L) {
+  if (breaks > 0L && model < 3L)
     stop("breaks > 0 requires model >= 3.", call. = FALSE)
-  }
+  if (maxlags < 0L) stop("'maxlags' must be non-negative.", call. = FALSE)
+  if (nfactors < 1L) stop("'nfactors' must be at least 1.", call. = FALSE)
   lagselect <- match.arg(lagselect, c("bic", "aic", "maic", "mbic", "fixed"))
 
   ivar <- index[1]
   tvar <- index[2]
-
-  ## ── Prepare data ─────────────────────────────────────────────────────────
   mf      <- stats::model.frame(formula, data = data, na.action = stats::na.omit)
   depvar  <- names(mf)[1]
   indvars <- names(mf)[-1]
   k       <- length(indvars)
-
   if (k < 1) stop("At least one independent variable required.", call. = FALSE)
 
-  keep <- stats::complete.cases(data[, c(depvar, indvars, ivar, tvar), drop = FALSE])
+  keep   <- stats::complete.cases(data[, c(depvar, indvars, ivar, tvar), drop = FALSE])
   data_c <- data[keep, , drop = FALSE]
   data_c <- data_c[order(data_c[[ivar]], data_c[[tvar]]), , drop = FALSE]
-
   panels <- sort(unique(data_c[[ivar]]))
-  N      <- length(panels)
   times  <- sort(unique(data_c[[tvar]]))
-  TT     <- length(times)
-
+  N  <- length(panels)
+  TT <- length(times)
   if (N < 2) stop("At least 2 panel units are required.", call. = FALSE)
   if (TT < 10) stop("At least 10 time periods are required.", call. = FALSE)
-
-  obs_count <- as.integer(table(data_c[[ivar]]))
-  if (length(unique(obs_count)) > 1) {
+  if (nrow(data_c) != N * TT)
     stop("Panel must be balanced for xtcadfcoint.", call. = FALSE)
-  }
-
-  if (nfactors > k + 1) {
-    message("nfactors > k+1; setting nfactors = ", k + 1)
+  if (nfactors > k + 1L) {
+    message("nfactors > k+1; setting nfactors = ", k + 1L)
     nfactors <- k + 1L
   }
 
-  ## ── Build Y (TT x N) and X (TT x N*k) matrices ──────────────────────────
-  Y_mat <- matrix(NA_real_, TT, N)
-  X_mat <- array(NA_real_, dim = c(TT, N, k))
+  ## Y: TT x N; X: TT x (N*k), column i + (j-1)*N holds regressor j of unit i
+  Y <- matrix(NA_real_, TT, N)
+  X <- matrix(NA_real_, TT, N * k)
+  pid <- match(data_c[[ivar]], panels)
+  tid <- match(data_c[[tvar]], times)
+  Y[cbind(tid, pid)] <- data_c[[depvar]]
+  for (j in seq_len(k)) X[cbind(tid, pid + (j - 1L) * N)] <- data_c[[indvars[j]]]
 
-  for (pi in seq_along(panels)) {
-    idx <- which(data_c[[ivar]] == panels[pi])
-    sub <- data_c[idx, , drop = FALSE]
-    ti  <- match(sub[[tvar]], times)
-    Y_mat[ti, pi]    <- sub[[depvar]]
-    for (j in seq_len(k)) {
-      X_mat[ti, pi, j] <- sub[[indvars[j]]]
-    }
+  opt <- list(model = model, brk_slope = isTRUE(brk_slope),
+              brk_loadings = isTRUE(brk_loadings), nf = nfactors,
+              p_max = maxlags, auto = lagselect != "fixed",
+              ic = switch(lagselect, aic = 0L, bic = 1L, maic = 2L,
+                          mbic = 3L, fixed = 1L),
+              cce = isTRUE(cce))
+
+  if (breaks == 0L) {
+    r <- .bcs_main(Y, X, 0L, opt)
+    est <- list(main = r, alt = r, Tb = NULL, Tb_alt = NULL, trim = NULL)
+  } else {
+    est <- .bcs_endog(Y, X, breaks, trimming, opt)
   }
 
-  ## ── CCE cross-sectional means ─────────────────────────────────────────────
-  Ybar <- rowMeans(Y_mat)             # TT
-  Xbar <- apply(X_mat, c(1, 3), mean) # TT x k
-
-  ## ── Estimate pooled CCE beta ──────────────────────────────────────────────
-  ## Pooled CCEP: pool first-differences + CCE augmentation
-  beta_ccep <- .ccep_estimate(Y_mat, X_mat, Ybar, Xbar, TT, N, k,
-                               model, breaks, trimming, brk_slope,
-                               brk_loadings, nfactors, cce)
-
-  ## ── Individual CADF statistics ────────────────────────────────────────────
-  t_individual <- numeric(N)
-  p_selected   <- integer(N)
-  lag_auto     <- lagselect != "fixed"
-  ic_type      <- switch(lagselect, aic = 0L, bic = 1L, maic = 2L, mbic = 3L, fixed = 1L)
-
-  for (pi in seq_along(panels)) {
-    y_i  <- Y_mat[, pi]
-    X_i  <- X_mat[, pi, , drop = FALSE]
-    dim(X_i) <- c(TT, k)
-
-    res_i <- .cadf_unit(y_i, X_i, Ybar, Xbar, model, breaks, trimming,
-                         maxlags, lag_auto, ic_type,
-                         brk_slope, brk_loadings, cce, beta_ccep)
-    t_individual[pi] <- res_i$t_stat
-    p_selected[pi]   <- res_i$p_sel
-  }
-
-  ## ── Panel CIPS statistic ──────────────────────────────────────────────────
-  panel_cips     <- mean(t_individual)
-  panel_cips_alt <- panel_cips   # same for no-break case; updated below for breaks
-  Tb_hat         <- NULL
-  Tb_tilde       <- NULL
-
-  ## ── Break date estimation ─────────────────────────────────────────────────
-  if (breaks > 0L) {
-    brk_res <- .estimate_breaks(Y_mat, X_mat, Ybar, Xbar, TT, N, k,
-                                 model, breaks, trimming, brk_slope,
-                                 brk_loadings, nfactors, cce,
-                                 maxlags, lag_auto, ic_type, beta_ccep)
-    Tb_hat         <- brk_res$Tb_hat
-    Tb_tilde       <- brk_res$Tb_tilde
-    panel_cips_alt <- brk_res$panel_cips_tilde
-  }
-
-  ## ── SSR matrix ───────────────────────────────────────────────────────────
-  ## Row 1: individual SSRs, Row 2: pooled SSR, Row 3: total SSR
-  SSR_ind <- vapply(seq_along(panels), function(pi) {
-    y_i  <- Y_mat[, pi]
-    X_i  <- X_mat[, pi, , drop = FALSE]
-    dim(X_i) <- c(TT, k)
-    Xreg <- .build_ccep_regressors(y_i, X_i, Ybar, Xbar, model, 0L, NULL,
-                                    brk_slope, brk_loadings, cce)
-    if (is.null(Xreg)) return(NA_real_)
-    fit  <- stats::lm.fit(Xreg, y_i)
-    sum(fit$residuals^2, na.rm = TRUE)
-  }, numeric(1))
-  SSR_mat <- matrix(c(SSR_ind, sum(SSR_ind, na.rm = TRUE), sum(SSR_ind, na.rm = TRUE)),
-                    ncol = 1)
-
-  ## ── Bootstrap critical values ─────────────────────────────────────────────
   cv_mat <- NULL
   if (simulate > 0L) {
-    message("Simulating bootstrap critical values (", simulate, " replications)...")
-    cv_mat <- .simulate_cv(N, TT, k, model, breaks, brk_slope, brk_loadings,
-                            nfactors, cce, simulate)
+    message("Simulating critical values (", simulate, " replications)...")
+    cv_mat <- .bcs_simulate_cv(N, TT, k, if (breaks > 0L) est$Tb else 0L,
+                               opt, simulate)
   }
 
-  ## ── Output ────────────────────────────────────────────────────────────────
   out <- list(
-    panel_cips     = panel_cips,
-    panel_cips_alt = panel_cips_alt,
-    t_individual   = t_individual,
-    p_selected     = p_selected,
-    beta_ccep      = beta_ccep,
-    SSR            = SSR_mat,
-    Tb_hat         = Tb_hat,
-    Tb_tilde       = Tb_tilde,
-    N              = N,
-    TT             = TT,
-    k              = k,
-    model          = model,
-    breaks         = breaks,
-    trimming       = trimming,
-    lagselect      = lagselect,
-    nfactors       = nfactors,
-    brk_slope      = brk_slope,
-    brk_loadings   = brk_loadings,
-    cce            = cce,
-    depvar         = depvar,
-    indepvars      = indvars,
-    panels         = panels,
-    times          = times,
-    cv             = cv_mat,
-    level          = level
-  )
+    panel_cips      = est$main$panel,
+    panel_cips_alt  = if (breaks > 0L) est$alt$panel else NULL,
+    panel_cips_trim = if (!is.null(est$trim)) est$trim$panel else NULL,
+    t_individual    = est$main$t,
+    t_trim          = if (!is.null(est$trim)) est$trim$t else NULL,
+    p_selected      = est$main$p,
+    beta_ccep       = est$main$beta,
+    beta_ccep_alt   = if (breaks > 0L) est$alt$beta else NULL,
+    SSR             = est$main$ssr,
+    Tb_hat          = est$Tb,
+    Tb_tilde        = est$Tb_alt,
+    Tb_trim         = if (!is.null(est$trim)) est$trim$Tb else NULL,
+    N = N, TT = TT, k = k, model = model, breaks = breaks,
+    trimming = trimming, lagselect = lagselect, maxlags = maxlags,
+    nfactors = nfactors, brk_slope = opt$brk_slope,
+    brk_loadings = opt$brk_loadings, cce = opt$cce,
+    depvar = depvar, indepvars = indvars, panels = panels, times = times,
+    cv = cv_mat, level = level)
   class(out) <- "xtcadfcoint"
   out
 }
 
 
-## ── Internal: CCE pooled estimator ──────────────────────────────────────
-#' @keywords internal
-.ccep_estimate <- function(Y_mat, X_mat, Ybar, Xbar, TT, N, k,
-                            model, breaks, trimming, brk_slope,
-                            brk_loadings, nfactors, cce) {
-  ## Pool first-differenced CCE regressions to get beta_ccep
-  ## Simple implementation: average of per-unit OLS on demeaned levels
-  beta_pool <- numeric(k)
-  cnt       <- 0L
-  for (pi in seq_len(N)) {
-    y_i <- Y_mat[, pi]
-    X_i <- X_mat[, pi, , drop = FALSE]
-    dim(X_i) <- c(TT, k)
-    Xreg <- .build_ccep_regressors(y_i, X_i, Ybar, Xbar, model, breaks, NULL,
-                                    brk_slope, brk_loadings, cce)
-    if (is.null(Xreg) || nrow(Xreg) < k + 2) next
-    fit <- tryCatch(stats::lm.fit(Xreg, y_i), error = function(e) NULL)
-    if (is.null(fit)) next
-    # Extract the X coefficients (not CCE augmentation or dummies)
-    # Columns 1..k correspond to x_j regressors
-    nc <- length(fit$coefficients)
-    if (nc >= k) {
-      beta_pool <- beta_pool + fit$coefficients[seq_len(k)]
-      cnt       <- cnt + 1L
-    }
+## ------------------------------------------------------------------
+## Engine: port of the Mata translation (xtcadfcoint_mata.ado) of the
+## authors' GAUSS procedures CADFcoin_multiple, cadf_multiple,
+## adf_multiple, CADFcoin_multiple_endog and KimPerron_trimdata.
+## ------------------------------------------------------------------
+
+# internal
+.bcs_ginv <- function(A) {
+  out <- tryCatch(solve(A), error = function(e) NULL)
+  if (is.null(out)) {
+    s <- svd(A)
+    d <- ifelse(s$d > max(s$d) * 1e-12, 1 / s$d, 0)
+    out <- s$v %*% (d * t(s$u))
   }
-  if (cnt > 0) beta_pool / cnt else rep(NA_real_, k)
+  out
 }
 
-
-## ── Internal: build CCE-augmented regressor matrix ──────────────────────
-#' @keywords internal
-.build_ccep_regressors <- function(y_i, X_i, Ybar, Xbar, model, breaks, Tb,
-                                    brk_slope, brk_loadings, cce) {
-  TT <- length(y_i)
-  k  <- ncol(X_i)
-
-  ## Base regressors: X_i
-  Xreg <- X_i
-
-  ## Deterministic components
-  ones <- rep(1, TT)
-  trend <- seq_len(TT)
-
-  if (model == 0L) {
-    # none
-  } else if (model == 1L) {
-    Xreg <- cbind(Xreg, ones)
-  } else if (model == 2L) {
-    Xreg <- cbind(Xreg, ones, trend)
-  } else if (model >= 3L && !is.null(Tb) && length(Tb) > 0 && Tb[1] > 0) {
-    Xreg <- cbind(Xreg, ones)
-    if (model >= 4L) Xreg <- cbind(Xreg, trend)
-    for (tb in Tb) {
-      du <- as.integer(seq_len(TT) > tb)
-      Xreg <- cbind(Xreg, du)
-      if (model == 5L) Xreg <- cbind(Xreg, seq_len(TT) * du)
-    }
-  } else if (model >= 3L) {
-    Xreg <- cbind(Xreg, ones)
-    if (model >= 4L) Xreg <- cbind(Xreg, trend)
-  }
-
-  ## CCE augmentation
-  if (cce) {
-    Xreg <- cbind(Xreg, Ybar, Xbar)
-  }
-
-  if (nrow(Xreg) < ncol(Xreg) + 2) return(NULL)
-  Xreg
+# internal
+.bcs_lag <- function(M, n) {
+  M <- as.matrix(M)
+  if (n >= nrow(M)) return(matrix(NA_real_, nrow(M), ncol(M)))
+  rbind(matrix(NA_real_, n, ncol(M)), M[seq_len(nrow(M) - n), , drop = FALSE])
 }
 
+# internal
+.bcs_dummies <- function(TT, Tb) {
+  n_br <- length(Tb)
+  DU <- DT <- DTb <- matrix(0, TT, n_br)
+  for (i in seq_len(n_br)) {
+    DU[, i]  <- c(rep(0, Tb[i]), rep(1, TT - Tb[i]))
+    DT[, i]  <- c(rep(0, Tb[i]), seq_len(TT - Tb[i]))
+    DTb[Tb[i] + 1L, i] <- 1
+  }
+  list(DU = DU, DT = DT, DTb = DTb)
+}
 
-## ── Internal: individual CADF test ──────────────────────────────────────
-#' @keywords internal
-.cadf_unit <- function(y_i, X_i, Ybar, Xbar, model, breaks, trimming,
-                        maxlags, lag_auto, ic_type,
-                        brk_slope, brk_loadings, cce, beta_ccep) {
-  TT <- length(y_i)
-  k  <- ncol(X_i)
+# internal
+.bcs_deter <- function(TT, model, dm, impulse) {
+  tr <- seq_len(TT)
+  switch(as.character(model),
+    "0" = NULL,
+    "1" = matrix(1, TT, 1),
+    "2" = cbind(1, tr),
+    "3" = cbind(1, dm$DU, if (impulse) dm$DTb),
+    "4" = cbind(1, tr, dm$DU, if (impulse) dm$DTb),
+    "5" = cbind(1, tr, dm$DU, dm$DT, if (impulse) dm$DTb))
+}
 
-  ## Compute CCE residuals: e_i = y_i - X_i * beta_ccep
-  if (!any(is.na(beta_ccep))) {
-    e_i <- y_i - X_i %*% beta_ccep
+# internal
+.bcs_unit_x <- function(X, i, N, k, brk_slope, DU) {
+  xi <- X[, i + (seq_len(k) - 1L) * N, drop = FALSE]
+  if (brk_slope && !is.null(DU) && ncol(DU) > 0L)
+    xi <- cbind(xi, do.call(cbind, lapply(seq_len(ncol(DU)),
+                                          function(b) DU[, b] * xi)))
+  xi
+}
+
+# internal
+.bcs_main <- function(Y, X, Tb, opt, model = opt$model, auto = opt$auto,
+                      stats = TRUE) {
+  TT <- nrow(Y); N <- ncol(Y); k <- ncol(X) / N
+  if (length(Tb) == 1L && Tb[1] == 0) Tb <- integer(0)
+  n_br <- length(Tb)
+  dm <- .bcs_dummies(TT, Tb)
+  DU <- if (n_br > 0L && (model >= 3L || opt$brk_slope || opt$brk_loadings)) dm$DU else NULL
+  x_deter <- .bcs_deter(TT, model, dm, impulse = FALSE)
+
+  xbar <- sapply(seq_len(k), function(j) rowMeans(X[, (j - 1L) * N + seq_len(N), drop = FALSE]))
+  xbar <- matrix(xbar, TT, k)
+  ybar <- rowMeans(Y)
+  if (!opt$cce) {
+    H <- x_deter
   } else {
-    e_i <- y_i
+    cam <- cbind(ybar, xbar)
+    H <- cam
+    if (opt$brk_loadings && n_br > 0L)
+      for (b in seq_len(n_br)) H <- cbind(H, dm$DU[, b] * cam)
+    H <- cbind(x_deter, H)
   }
+  M <- if (is.null(H)) diag(TT) else diag(TT) - H %*% .bcs_ginv(crossprod(H)) %*% t(H)
 
-  ## ADF on e_i with CCE augmentation
-  ## Build first-differenced ADF regression
-  de <- diff(e_i)
-  e_lag <- e_i[-TT]       # levels lagged
-  TT2 <- length(de)
-
-  if (TT2 < 5) return(list(t_stat = NA_real_, p_sel = 0L))
-
-  ## Lag augmentation: select lag order
-  p_opt <- 0L
-  if (lag_auto && maxlags > 0) {
-    ic_vals <- numeric(maxlags + 1)
-    for (p in 0:maxlags) {
-      ic_vals[p + 1] <- .adf_ic(de, e_lag, p, ic_type, TT2)
-    }
-    p_opt <- which.min(ic_vals) - 1L
-  } else if (!lag_auto) {
-    p_opt <- as.integer(maxlags)
+  kk  <- if (opt$brk_slope) k * (n_br + 1L) else k
+  den <- matrix(0, kk, kk); num <- matrix(0, kk, 1)
+  xs  <- vector("list", N)
+  for (i in seq_len(N)) {
+    xi <- .bcs_unit_x(X, i, N, k, opt$brk_slope, DU)
+    xs[[i]] <- xi
+    Mx <- M %*% xi
+    den <- den + crossprod(xi, Mx)
+    num <- num + crossprod(Mx, Y[, i])
   }
+  beta <- as.numeric(.bcs_ginv(den) %*% num)
 
-  ## Run ADF with p_opt lags
-  t_stat <- .adf_tstat(de, e_lag, Ybar, Xbar, model, breaks, p_opt,
-                        brk_slope, brk_loadings, cce, TT)
+  EG <- sapply(seq_len(N), function(i) Y[, i] - xs[[i]] %*% beta)
+  EG <- matrix(EG, TT, N)
+  EGdt <- if (is.null(x_deter)) EG else
+    EG - x_deter %*% (.bcs_ginv(crossprod(x_deter)) %*% crossprod(x_deter, EG))
+  EGdf <- M %*% EG
+  d1 <- function(A) A[-1L, , drop = FALSE] - A[-TT, , drop = FALSE]
+  ssr <- c(EG_defactored = sum(EGdf^2), EG_detrended = sum(EGdt^2),
+           DEG_defactored = sum(d1(EGdf)^2), DEG_detrended = sum(d1(EGdt)^2))
 
-  list(t_stat = t_stat, p_sel = p_opt)
+  out <- list(beta = beta, ssr = ssr)
+  if (!stats) return(out)
+  tp <- .bcs_cadf(EG, if (opt$cce) xbar else NULL, model, Tb, opt, auto)
+  c(out, list(t = tp$t, p = tp$p, panel = mean(tp$t)))
 }
 
+# internal
+.bcs_cadf <- function(EG, xbar, model, Tb, opt, auto) {
+  TT <- nrow(EG); N <- ncol(EG)
+  n_br <- length(Tb)
+  cce <- !is.null(xbar)
+  dm <- .bcs_dummies(TT, Tb)
+  x_deter <- .bcs_deter(TT, model, dm, impulse = TRUE)
+  p_max <- opt$p_max
 
-## ── Internal: ADF information criterion ─────────────────────────────────
-#' @keywords internal
-.adf_ic <- function(de, e_lag, p, ic_type, TT2) {
-  n_use <- TT2 - p
-  if (n_use < 3) return(Inf)
-  y_reg <- de[(p + 1):TT2]
-  X_reg <- cbind(e_lag[(p + 1):TT2])
-  if (p > 0) {
-    lag_mat <- matrix(NA_real_, n_use, p)
-    for (j in seq_len(p)) {
-      lag_mat[, j] <- de[(p + 1 - j):(TT2 - j)]
-    }
-    X_reg <- cbind(X_reg, lag_mat)
-  }
-  X_reg <- cbind(1, X_reg)
-  fit   <- tryCatch(stats::lm.fit(X_reg, y_reg), error = function(e) NULL)
-  if (is.null(fit)) return(Inf)
-  sig2  <- sum(fit$residuals^2) / n_use
-  if (sig2 <= 0) return(Inf)
-  k_par <- ncol(X_reg)
-  switch(as.character(ic_type),
-    "0" = log(sig2) + 2 * k_par / n_use,                   # AIC
-    "1" = log(sig2) + log(n_use) * k_par / n_use,           # BIC
-    "2" = log(sig2) + 2 * k_par / n_use + 2 * k_par / n_use, # MAIC approx
-    "3" = log(sig2) + log(n_use) * k_par / n_use,           # MBIC (simplification)
-    Inf
-  )
-}
-
-
-## ── Internal: ADF t-statistic ────────────────────────────────────────────
-#' @keywords internal
-.adf_tstat <- function(de, e_lag, Ybar, Xbar, model, breaks, p,
-                        brk_slope, brk_loadings, cce, TT) {
-  TT2 <- length(de)
-  n_use <- TT2 - p
-  if (n_use < 3) return(NA_real_)
-
-  y_reg <- de[(p + 1):TT2]
-  X_reg <- matrix(e_lag[(p + 1):TT2], ncol = 1)
-  if (p > 0) {
-    lag_mat <- matrix(NA_real_, n_use, p)
-    for (j in seq_len(p)) {
-      lag_mat[, j] <- de[(p + 1 - j):(TT2 - j)]
-    }
-    X_reg <- cbind(X_reg, lag_mat)
-  }
-  # Deterministic
-  if (model >= 1L) X_reg <- cbind(X_reg, rep(1, n_use))
-  if (model >= 2L) X_reg <- cbind(X_reg, seq_len(n_use))
-  # CCE augmentation with cross-sectional means differences
+  DEG  <- EG[-1L, , drop = FALSE] - EG[-TT, , drop = FALSE]
+  EGl  <- EG[-TT, , drop = FALSE]                  # EG_resid_lag[2::T, ]
   if (cce) {
-    dYbar <- diff(Ybar)[(p + 1):TT2]
-    dXbar <- apply(Xbar, 2, diff)[(p + 1):TT2, , drop = FALSE]
-    X_reg <- cbind(X_reg, dYbar, dXbar)
+    cm  <- rowMeans(EG)
+    lagterms <- matrix(cm[-TT], ncol = 1)
+    dterms   <- matrix(rowMeans(DEG), ncol = 1)
+    nf <- opt$nf
+    if (nf > 1L) {
+      xa <- xbar[, seq_len(min(nf - 1L, ncol(xbar))), drop = FALSE]
+      lagterms <- cbind(lagterms, xa[-TT, , drop = FALSE])
+      dterms   <- cbind(dterms, xa[-1L, , drop = FALSE] - xa[-TT, , drop = FALSE])
+    }
+    if (opt$brk_loadings && n_br > 0L) {
+      for (b in seq_len(n_br)) {
+        lagterms <- cbind(lagterms, dm$DU[-1L, b] * cm[-TT])
+        dterms   <- cbind(dterms, dm$DU[-1L, b] * rowMeans(DEG))
+      }
+    }
   }
 
-  fit <- tryCatch(stats::lm.fit(X_reg, y_reg), error = function(e) NULL)
-  if (is.null(fit)) return(NA_real_)
-
-  ## t-statistic on the first coefficient (rho - 1)
-  n_c     <- ncol(X_reg)
-  resid   <- fit$residuals
-  sig2    <- sum(resid^2) / max(n_use - n_c, 1)
-  XtX_inv <- tryCatch(solve(crossprod(X_reg)), error = function(e) NULL)
-  if (is.null(XtX_inv)) return(NA_real_)
-  se_rho  <- sqrt(sig2 * XtX_inv[1, 1])
-  if (se_rho < 1e-14) return(NA_real_)
-  fit$coefficients[1] / se_rho
-}
-
-
-## ── Internal: break date estimation ─────────────────────────────────────
-#' @keywords internal
-.estimate_breaks <- function(Y_mat, X_mat, Ybar, Xbar, TT, N, k,
-                               model, breaks, trimming, brk_slope,
-                               brk_loadings, nfactors, cce,
-                               maxlags, lag_auto, ic_type, beta_ccep) {
-  t1    <- floor(trimming * TT)
-  t2    <- TT - t1
-
-  if (breaks == 1L) {
-    ## Grid search over single break dates
-    tb_candidates <- seq(t1, t2)
-    best_ssr  <- Inf
-    best_tb_hat <- t1
-
-    for (tb in tb_candidates) {
-      ssr <- .panel_ssr_given_breaks(Y_mat, X_mat, Ybar, Xbar, TT, N, k,
-                                      model, c(tb), brk_slope, brk_loadings, cce)
-      if (!is.na(ssr) && ssr < best_ssr) {
-        best_ssr    <- ssr
-        best_tb_hat <- tb
-      }
+  t_out <- rep(NA_real_, N); p_out <- integer(N)
+  fit_t <- function(y, x) {
+    xtx <- .bcs_ginv(crossprod(x))
+    b <- xtx %*% crossprod(x, y)
+    e <- y - x %*% b
+    s2 <- sum(e^2) / (TT - ncol(x))
+    list(b = b, s2 = s2, t1 = b[1] / sqrt(s2 * xtx[1, 1]), x1 = x[, 1])
+  }
+  for (i in seq_len(N)) {
+    y0 <- DEG[, i]
+    x0 <- cbind(EGl[, i], if (cce) cbind(lagterms, dterms),
+                if (!is.null(x_deter)) x_deter[-1L, , drop = FALSE])
+    make <- function(p) {
+      if (p == 0L) return(list(y = y0, x = x0))
+      lt <- do.call(cbind, lapply(seq_len(p), function(ii)
+        cbind(.bcs_lag(y0, ii), if (cce) .bcs_lag(dterms, ii))))
+      rows <- (p_max + 1L):length(y0)
+      list(y = y0[rows], x = cbind(x0, lt)[rows, , drop = FALSE])
     }
-    Tb_hat <- c(best_tb_hat)
-
-    ## lambda_tilde: individual sequential break detection
-    Tb_tilde_vec <- numeric(N)
-    for (pi in seq_len(N)) {
-      y_i <- Y_mat[, pi]
-      X_i <- X_mat[, pi, , drop = FALSE]
-      dim(X_i) <- c(TT, k)
-      best_tb_i <- t1; best_ssr_i <- Inf
-      for (tb in tb_candidates) {
-        Xreg <- .build_ccep_regressors(y_i, X_i, Ybar, Xbar, model, breaks, c(tb),
-                                        brk_slope, brk_loadings, cce)
-        if (is.null(Xreg)) next
-        fit  <- tryCatch(stats::lm.fit(Xreg, y_i), error = function(e) NULL)
-        if (is.null(fit)) next
-        ssr_i <- sum(fit$residuals^2)
-        if (!is.na(ssr_i) && ssr_i < best_ssr_i) {
-          best_ssr_i <- ssr_i; best_tb_i <- tb
-        }
-      }
-      Tb_tilde_vec[pi] <- best_tb_i
-    }
-    Tb_tilde <- c(round(mean(Tb_tilde_vec)))
-
-  } else if (breaks == 2L) {
-    ## Grid search over two break dates
-    best_ssr <- Inf; best_tb1 <- t1; best_tb2 <- t2
-
-    for (tb1 in seq(t1, t2 - t1)) {
-      for (tb2 in seq(tb1 + t1, t2)) {
-        ssr <- .panel_ssr_given_breaks(Y_mat, X_mat, Ybar, Xbar, TT, N, k,
-                                        model, c(tb1, tb2), brk_slope,
-                                        brk_loadings, cce)
-        if (!is.na(ssr) && ssr < best_ssr) {
-          best_ssr <- ssr; best_tb1 <- tb1; best_tb2 <- tb2
+    if (!auto) {
+      d <- make(p_max)
+      t_out[i] <- fit_t(d$y, d$x)$t1
+      p_out[i] <- p_max
+    } else {
+      best <- Inf
+      for (ip in p_max:0L) {
+        d <- make(ip)
+        f <- fit_t(d$y, d$x)
+        nc <- ncol(d$x)
+        tau <- if (opt$ic >= 2L) (f$b[1]^2) * sum(f$x1^2) / TT^2 / f$s2 else 0
+        ic <- switch(as.character(opt$ic),
+          "0" = log(f$s2) + 2 * nc / TT,
+          "1" = log(f$s2) + log(TT) * nc / TT,
+          "2" = log(f$s2) + 2 * (nc + tau) / TT,
+          "3" = log(f$s2) + log(TT) * (nc + tau) / TT)
+        if (ic < best) {
+          best <- ic
+          p_out[i] <- ip
+          t_out[i] <- f$t1
         }
       }
     }
-    Tb_hat <- c(best_tb1, best_tb2)
-    Tb_tilde <- Tb_hat  # simplified for 2 breaks
-  } else {
-    Tb_hat   <- integer(0)
-    Tb_tilde <- integer(0)
   }
-
-  ## Compute lambda_hat and lambda_tilde statistics using best break dates
-  t_hat_vec   <- numeric(N)
-  t_tilde_vec <- numeric(N)
-
-  for (pi in seq_len(N)) {
-    y_i <- Y_mat[, pi]
-    X_i <- X_mat[, pi, , drop = FALSE]
-    dim(X_i) <- c(TT, k)
-
-    ## t_hat: use panel-common Tb_hat
-    ri_hat <- .cadf_unit_with_breaks(y_i, X_i, Ybar, Xbar, model,
-                                      Tb_hat, maxlags, lag_auto, ic_type,
-                                      brk_slope, brk_loadings, cce, beta_ccep, TT)
-    t_hat_vec[pi] <- ri_hat
-
-    ## t_tilde: use Tb_tilde (same for simplified case)
-    t_tilde_vec[pi] <- ri_hat
-  }
-
-  list(
-    Tb_hat          = Tb_hat,
-    Tb_tilde        = Tb_tilde,
-    panel_cips_hat  = mean(t_hat_vec, na.rm = TRUE),
-    panel_cips_tilde = mean(t_tilde_vec, na.rm = TRUE)
-  )
+  list(t = t_out, p = p_out)
 }
 
-#' @keywords internal
-.panel_ssr_given_breaks <- function(Y_mat, X_mat, Ybar, Xbar, TT, N, k,
-                                     model, Tb, brk_slope, brk_loadings, cce) {
-  total_ssr <- 0
-  for (pi in seq_len(N)) {
-    y_i <- Y_mat[, pi]
-    X_i <- X_mat[, pi, , drop = FALSE]
-    dim(X_i) <- c(TT, k)
-    Xreg <- .build_ccep_regressors(y_i, X_i, Ybar, Xbar, model, length(Tb), Tb,
-                                    brk_slope, brk_loadings, cce)
-    if (is.null(Xreg)) return(NA_real_)
-    fit  <- tryCatch(stats::lm.fit(Xreg, y_i), error = function(e) NULL)
-    if (is.null(fit)) return(NA_real_)
-    total_ssr <- total_ssr + sum(fit$residuals^2)
-  }
-  total_ssr
-}
-
-#' @keywords internal
-.cadf_unit_with_breaks <- function(y_i, X_i, Ybar, Xbar, model, Tb,
-                                    maxlags, lag_auto, ic_type,
-                                    brk_slope, brk_loadings, cce, beta_ccep, TT) {
-  k <- ncol(X_i)
-  if (!any(is.na(beta_ccep))) {
-    e_i <- y_i - X_i %*% beta_ccep
+# internal
+.bcs_endog <- function(Y, X, m, trimming, opt) {
+  TT <- nrow(Y); N <- ncol(Y)
+  h <- floor(trimming * TT)
+  if (m == 1L) {
+    cand <- matrix((h + 1L):(TT - h), ncol = 1)
   } else {
-    e_i <- y_i
+    cand <- do.call(rbind, lapply((h + 1L):(TT - 2L * h), function(i)
+      cbind(i, (h + i):(TT - h))))
   }
-  de    <- diff(e_i)
-  e_lag <- e_i[-TT]
-  TT2   <- length(de)
-  if (TT2 < 5) return(NA_real_)
+  ssr <- t(apply(cand, 1, function(tb) .bcs_main(Y, X, tb, opt, stats = FALSE)$ssr))
+  Tb  <- as.integer(cand[which.min(ssr[, "EG_defactored"]), ])
+  Tb2 <- as.integer(cand[which.min(ssr[, "EG_detrended"]), ])
+  main <- .bcs_main(Y, X, Tb, opt)
+  alt  <- .bcs_main(Y, X, Tb2, opt)
 
-  p_opt <- 0L
-  if (lag_auto && maxlags > 0) {
-    ic_vals <- numeric(maxlags + 1)
-    for (p in 0:maxlags) {
-      ic_vals[p + 1] <- .adf_ic(de, e_lag, p, ic_type, TT2)
+  trim <- NULL
+  if (opt$model == 5L) {
+    kp <- .bcs_kimperron_trim(cbind(Y, X), Tb, 3L)
+    if (nrow(kp$y) > 0L) {
+      Yt <- kp$y[, seq_len(N), drop = FALSE]
+      Xt <- kp$y[, -seq_len(N), drop = FALSE]
+      rt <- if (kp$Tb[1] == 0) {
+        o2 <- opt; o2$brk_slope <- FALSE; o2$brk_loadings <- FALSE
+        .bcs_main(Yt, Xt, 0L, o2, model = 2L, auto = FALSE)
+      } else {
+        .bcs_main(Yt, Xt, kp$Tb, opt, auto = FALSE)
+      }
+      trim <- list(panel = rt$panel, t = rt$t, Tb = kp$Tb)
     }
-    p_opt <- which.min(ic_vals) - 1L
   }
-
-  .adf_tstat(de, e_lag, Ybar, Xbar, model, length(Tb), p_opt,
-              brk_slope, brk_loadings, cce, TT)
+  list(main = main, alt = alt, Tb = Tb, Tb_alt = Tb2, trim = trim)
 }
 
-
-## ── Internal: bootstrap simulation ──────────────────────────────────────
-#' @keywords internal
-.simulate_cv <- function(N, TT, k, model, breaks, brk_slope, brk_loadings,
-                          nfactors, cce, reps) {
-  panel_stats <- numeric(reps)
-
-  ## Fix break dates for simulation (even spacing)
-  if (breaks == 1L) {
-    Tb_sim <- floor(0.5 * TT)
-  } else if (breaks == 2L) {
-    Tb_sim <- c(floor(0.3 * TT), floor(0.7 * TT))
-  } else {
-    Tb_sim <- integer(0)
+# internal
+.bcs_kimperron_trim <- function(y, Tb, trm) {
+  TT <- nrow(y); n_br <- length(Tb)
+  lo <- Tb - trm; hi <- Tb + trm
+  fin <- cbind(ifelse(lo > 1, lo, NA), ifelse(hi < TT, hi, NA))
+  filt <- fin[stats::complete.cases(fin), , drop = FALSE]
+  low_ind <- if (any(is.na(fin[, 1]))) max(which(is.na(fin[, 1]))) else 0L
+  high_ind <- if (all(is.na(fin[, 2]))) 1L else 0L
+  disc <- rep(0, TT)
+  if (low_ind > 0L && !is.na(fin[low_ind, 2])) disc[seq_len(fin[low_ind, 2])] <- 1
+  if (high_ind > 0L && !is.na(fin[high_ind, 1])) disc[(fin[high_ind, 1] + 1):TT] <- 1
+  marker <- rep(0, TT)
+  yh <- y
+  if (nrow(filt) > 0L) {
+    S <- matrix(0, TT, ncol(y))
+    for (r in seq_len(nrow(filt))) {
+      a <- filt[r, 1]; b <- filt[r, 2]
+      disc[(a + 1):b] <- 1
+      marker[a] <- a
+      step <- c(rep(0, a + 1), rep(1, TT - a - 1))
+      S <- S + outer(step, y[b, ] - y[a, ])
+    }
+    yh <- y - S
   }
+  keepr <- which(disc == 0)
+  if (!length(keepr)) return(list(y = y[0, , drop = FALSE], Tb = 0L))
+  tb <- which(marker[keepr] > 0)
+  list(y = yh[keepr, , drop = FALSE], Tb = if (length(tb)) tb else 0L)
+}
 
+# internal
+.bcs_simulate_cv <- function(N, TT, k, Tb, opt, reps) {
+  o <- opt; o$p_max <- 0L; o$ic <- 0L
+  burn <- 50L
+  panel <- ind <- numeric(reps)
   for (r in seq_len(reps)) {
-    ## DGP: independent random walks (no cointegration)
-    Y_sim <- apply(matrix(stats::rnorm(TT * N), TT, N), 2, cumsum)
-    X_sim <- array(NA_real_, dim = c(TT, N, k))
-    for (j in seq_len(k)) {
-      X_sim[, , j] <- apply(matrix(stats::rnorm(TT * N), TT, N), 2, cumsum)
-    }
-    Ybar_s <- rowMeans(Y_sim)
-    Xbar_s <- apply(X_sim, c(1, 3), mean)
-
-    beta_s <- .ccep_estimate(Y_sim, X_sim, Ybar_s, Xbar_s, TT, N, k,
-                              model, breaks, 0.15, brk_slope,
-                              brk_loadings, nfactors, cce)
-
-    t_vec <- numeric(N)
-    for (pi in seq_len(N)) {
-      y_i <- Y_sim[, pi]
-      X_i <- X_sim[, pi, , drop = FALSE]
-      dim(X_i) <- c(TT, k)
-      res_i <- .cadf_unit(y_i, X_i, Ybar_s, Xbar_s, model,
-                           breaks, 0.15, 0L, FALSE, 1L,
-                           brk_slope, brk_loadings, cce, beta_s)
-      t_vec[pi] <- res_i$t_stat
-    }
-    panel_stats[r] <- mean(t_vec, na.rm = TRUE)
+    Ys <- rbind(0, apply(matrix(stats::rnorm((TT + burn - 1L) * N), ncol = N), 2, cumsum))
+    Xs <- rbind(0, apply(matrix(stats::rnorm((TT + burn - 1L) * N * k), ncol = N * k), 2, cumsum))
+    Ys <- Ys[(burn + 1L):(TT + burn), , drop = FALSE]
+    Xs <- Xs[(burn + 1L):(TT + burn), , drop = FALSE]
+    res <- .bcs_main(Ys, Xs, Tb, o, auto = FALSE)
+    panel[r] <- res$panel
+    ind[r]   <- res$t[1]
   }
-
-  ## Quantiles (1%, 2.5%, 5%, 10%)
-  cv <- stats::quantile(panel_stats, probs = c(0.01, 0.025, 0.05, 0.10),
-                         na.rm = TRUE)
+  q <- c(0.01, 0.025, 0.05, 0.10)
+  pick <- function(v) sort(v)[pmax(1, floor(q * reps))]
+  cv <- rbind(panel = pick(panel), individual = pick(ind))
+  colnames(cv) <- c("1%", "2.5%", "5%", "10%")
   cv
 }
 
@@ -718,6 +555,8 @@ print.xtcadfcoint <- function(x, ...) {
   cat(sprintf("  CIPS statistic (lambda_hat)  : %12.4f\n", x$panel_cips))
   if (x$breaks > 0) {
     cat(sprintf("  CIPS statistic (lambda_tilde): %12.4f\n", x$panel_cips_alt))
+    if (!is.null(x$panel_cips_trim))
+      cat(sprintf("  CIPS statistic (KP trimmed)  : %12.4f\n", x$panel_cips_trim))
   }
   cat(strrep("-", 78), "\n")
 
@@ -726,20 +565,16 @@ print.xtcadfcoint <- function(x, ...) {
   cat("  Refer to Tables B.13-B.24 in Banerjee & Carrion-i-Silvestre (2025)\n")
   cat("  or use simulate argument for bootstrap critical values.\n\n")
 
-  ## Bootstrap CVs if available
+  ## Simulated critical values if available
   if (!is.null(x$cv)) {
-    cat("  Bootstrap Critical Values (under H0: no cointegration):\n")
+    cv <- x$cv["panel", ]
+    cat("  Simulated critical values of the panel statistic (known break dates,\n")
+    cat("  independent random walks, no lag augmentation):\n")
     cat(strrep("-", 50), "\n")
-    cat(sprintf("  %5s%%: %10.4f  | Decision: %s\n",
-                "1", x$cv["1%"],
-                if (x$panel_cips < x$cv["1%"]) "Reject H0 ***" else "Fail to reject"))
-    cat(sprintf("  %5s%%: %10.4f  | Decision: %s\n",
-                "2.5", x$cv["2.5%"],
-                if (x$panel_cips < x$cv["2.5%"]) "Reject H0 **" else "Fail to reject"))
-    cat(sprintf("  %5s%%: %10.4f  | Decision: %s\n",
-                "5", x$cv["5%"],
-                if (x$panel_cips < x$cv["5%"]) "Reject H0 *" else "Fail to reject"))
-    cat(sprintf("  %5s%%: %10.4f\n", "10", x$cv["10%"]))
+    for (nm in names(cv)) {
+      cat(sprintf("  %5s: %10.4f  | %s\n", nm, cv[[nm]],
+                  if (x$panel_cips < cv[[nm]]) "Reject H0" else "Do not reject H0"))
+    }
     cat(strrep("-", 50), "\n\n")
   }
 
@@ -760,8 +595,11 @@ print.xtcadfcoint <- function(x, ...) {
   ## Pooled CCE beta
   cat("  Pooled CCE Estimator (beta_hat):\n")
   cat(strrep("-", 46), "\n")
-  for (j in seq_len(x$k)) {
-    cat(sprintf("  %-20s: %12.6f\n", x$indepvars[j], x$beta_ccep[j]))
+  for (j in seq_along(x$beta_ccep)) {
+    reg <- (j - 1L) %/% x$k
+    nm <- x$indepvars[(j - 1L) %% x$k + 1L]
+    if (reg > 0L) nm <- paste0(nm, " x DU", reg)
+    cat(sprintf("  %-20s: %12.6f\n", nm, x$beta_ccep[j]))
   }
   cat(strrep("-", 46), "\n\n")
 
