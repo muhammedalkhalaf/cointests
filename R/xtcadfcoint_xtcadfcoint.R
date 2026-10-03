@@ -30,8 +30,10 @@
 #'   Default \code{FALSE}.
 #' @param cce Logical. If \code{TRUE} (default), applies CCE cross-sectional
 #'   augmentation to account for common factors.
-#' @param simulate Integer. Number of bootstrap replications for critical value
-#'   simulation. Use 0 (default) to skip simulation.
+#' @param simulate Integer. Number of Monte Carlo replications used to
+#'   simulate critical values from independent Gaussian random walks at the
+#'   estimated break dates (see Details); this is not a bootstrap of the
+#'   data. Use 0 (default) to skip simulation.
 #' @param level Confidence level (in percent) for hypothesis test decisions.
 #'   Default 95.
 #'
