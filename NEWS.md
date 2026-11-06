@@ -1,12 +1,7 @@
 # cointests 1.1.1
 
-* Documentation only; no computation changed and all results are identical
-  to 1.1.0. In `xtcadfcoint()` the description of the argument `simulate`
-  said "bootstrap replications"; it now says that `simulate` is the number
-  of Monte Carlo replications used to simulate critical values from
-  independent Gaussian random walks at the estimated break dates, as the
-  Details section of the help page already stated, and that it is not a
-  bootstrap of the data.
+* Documentation only; computations and results are identical to 1.1.0.
+* Help page of `xtcadfcoint()`: the argument `simulate` is described as the number of Monte Carlo replications used to simulate critical values from independent Gaussian random walks at the estimated break dates.
 
 # cointests 1.1.0
 
